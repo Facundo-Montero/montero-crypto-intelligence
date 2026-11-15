@@ -1,12 +1,11 @@
 from datetime import datetime
 
-_SYMBOLS = {"usd": "US$", "eur": "€", "ars": "AR$"}
-
 
 def money(v, cur="usd"):
+    """Formato largo (para tablas de evidencia)."""
     if v is None:
         return "Sin dato"
-    s = _SYMBOLS.get(cur, cur.upper())
+    s = {"usd": "US$", "eur": "€", "ars": "AR$"}.get(cur, cur.upper())
     a = abs(v)
     if a >= 1e12:
         return f"{s} {v / 1e12:,.2f} billones"
@@ -17,6 +16,34 @@ def money(v, cur="usd"):
     if a >= 1:
         return f"{s} {v:,.2f}"
     return f"{s} {v:.8f}"
+
+
+def short_money(v):
+    """Formato compacto (para tarjetas): US$1.29T, US$86.9B, US$215M."""
+    if v is None:
+        return "—"
+    a = abs(v)
+    if a >= 1e12:
+        return f"US${v / 1e12:.2f}T"
+    if a >= 1e9:
+        return f"US${v / 1e9:.1f}B"
+    if a >= 1e6:
+        return f"US${v / 1e6:.1f}M"
+    if a >= 1e3:
+        return f"US${v / 1e3:.0f}K"
+    return f"US${v:,.0f}"
+
+
+def price(v, sym="US$"):
+    if v is None:
+        return "—"
+    if v >= 1000:
+        return f"{sym}{v:,.0f}"
+    if v >= 1:
+        return f"{sym}{v:,.2f}"
+    if v >= 0.01:
+        return f"{sym}{v:.4f}"
+    return f"{sym}{v:.8f}"
 
 
 def pct(v):

@@ -12,6 +12,9 @@ class Thresholds:
     circ_max_low: float = 0.40   # proporción de oferta máxima ya circulando (baja)
     fdv_cap_high: float = 1.8    # FDV/capitalización que sugiere dilución pendiente
     ath_deep: float = -75.0      # caída desde máximo histórico considerada profunda (%)
+    cap_fees_low: float = 30.0   # capitalización / comisiones anualizadas considerada moderada (≤)
+    cap_fees_high: float = 200.0 # capitalización / comisiones anualizadas considerada exigente (>)
+    tvl_drop_7d: float = -20.0   # caída del TVL en 7 días considerada relevante (%)
 
 
 THRESHOLDS = Thresholds()
@@ -80,6 +83,56 @@ def evaluate(ev, th=THRESHOLDS):
             "Hipótesis: el desarrollo público podría estar detenido.",
             "Si el desarrollo ocurre en repositorios privados o no vinculados a CoinGecko.",
             "Criterio MCI: commits = 0", ("commits",)))
+
+
+    cf, fees = v("cap_fees"), v("fees_30d")
+    if cf is not None and cf <= th.cap_fees_low:
+        out.append(Finding(
+            "ingresos_fees", "a_favor",
+            f"La capitalización equivale a {cf:,.1f} veces las comisiones anualizadas (dato de 30 días).",
+            "Hipótesis: el mercado valora el activo de forma moderada frente a la actividad económica que genera.",
+            "Si las comisiones son incentivadas, puntuales o de bajo margen, o si los ingresos no llegan a los tenedores del token.",
+            f"Criterio MCI: capitalización/comisiones anualizadas ≤ {th.cap_fees_low:.0f}x. Compará con pares del sector.", ("cap_fees",)))
+    elif cf is not None and cf > th.cap_fees_high:
+        out.append(Finding(
+            "ingresos_fees", "cautela",
+            f"La capitalización equivale a {cf:,.0f} veces las comisiones anualizadas (dato de 30 días).",
+            "Hipótesis: la valoración descuenta un crecimiento muy alto que las comisiones actuales no respaldan.",
+            "Si las comisiones crecen con fuerza o el valor del activo no depende de ellas (p. ej. reserva de valor).",
+            f"Criterio MCI: capitalización/comisiones anualizadas > {th.cap_fees_high:.0f}x", ("cap_fees",)))
+    elif fees is not None and fees <= 0:
+        out.append(Finding(
+            "ingresos_fees", "cautela",
+            "DefiLlama registra comisiones nulas en los últimos 30 días.",
+            "Hipótesis: el uso económico del protocolo es mínimo o no está medido.",
+            "Si el protocolo opera sin comisiones por diseño o DefiLlama aún no lo mide bien.",
+            "Criterio MCI: comisiones 30 d ≤ 0", ("fees_30d",)))
+
+    td = v("tvl_7d")
+    if td is not None and td <= th.tvl_drop_7d:
+        out.append(Finding(
+            "adopcion_uso", "cautela",
+            f"El TVL cayó {abs(td):.1f}% en 7 días.",
+            "Hipótesis: hubo salida de capital del protocolo.",
+            "Si la caída refleja solo el precio de los activos depositados y no retiros netos.",
+            f"Criterio MCI: variación del TVL a 7 días ≤ {th.tvl_drop_7d:.0f}%", ("tvl_7d",)))
+
+    au = ev["audits"].value if "audits" in ev else None
+    if au is not None:
+        if str(au).strip() in ("", "0", "None"):
+            out.append(Finding(
+                "seguridad", "cautela",
+                "DefiLlama no lista auditorías para este protocolo.",
+                "Hipótesis: el código podría no haber sido revisado por terceros.",
+                "Si existen auditorías no catalogadas por DefiLlama (verificá en el sitio oficial).",
+                "Criterio MCI: auditorías listadas = ninguna", ("audits",)))
+        else:
+            out.append(Finding(
+                "seguridad", "a_favor",
+                f"DefiLlama lista auditorías para este protocolo (nivel {au}).",
+                "Hipótesis (señal débil): el código tuvo al menos una revisión externa.",
+                "Si las auditorías son antiguas, de alcance limitado o hubo incidentes posteriores.",
+                "Criterio MCI: auditorías listadas ≠ ninguna", ("audits",)))
 
     p7, p30 = v("p7"), v("p30")
     if p7 is not None and p30 is not None:

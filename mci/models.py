@@ -47,3 +47,11 @@ class Verdict:
     reasons: tuple
     covered: int           # dimensiones con algún dato
     total: int
+
+
+@dataclass(frozen=True)
+class Fetched:
+    """Resultado de una fuente opcional: si falló, data es None y error explica por qué."""
+    data: object
+    at: datetime
+    error: str = ""

@@ -2,11 +2,12 @@
 
 STABLE_SYMBOLS = {"usdt", "usdc", "dai", "busd", "tusd", "usde", "fdusd", "usds", "usdd", "pyusd",
                   "frax", "lusd", "susd", "eurc", "eurs", "usd0", "usdy", "rlusd", "usdg"}
-DERIVATIVE_SYMBOLS = {"wbtc", "weth", "steth", "wsteth", "cbeth", "reth", "weeth", "ezeth", "rseth",
+DERIVATIVE_SYMBOLS = {"xaut", "paxg", "wbtc", "weth", "steth", "wsteth", "cbeth", "reth", "weeth", "ezeth", "rseth",
                       "wbeth", "cbbtc", "tbtc", "wavax", "wftm", "meth", "sweth", "oseth"}
-NAME_HINTS = ("wrapped", "bridged", "staked", "restaked", "tokenized", "tokenised", "3x long", "3x short")
+NAME_HINTS = ("wrapped", "bridged", "staked", "restaked", "tokenized", "tokenised", "3x long", "3x short",
+              "heloc", "treasury fund", "t-bill", "money market", "tether gold", "pax gold")
 CATEGORY_STABLE = ("stablecoin",)
-CATEGORY_DERIVATIVE = ("wrapped", "liquid staking", "liquid restaking", "tokenized")
+CATEGORY_DERIVATIVE = ("wrapped", "liquid staking", "liquid restaking", "tokenized", "real world assets")
 
 STABLE = "Stablecoin"
 DERIVATIVE = "Wrapped / derivado"
