@@ -1,45 +1,39 @@
 # MONTERO CRYPTO INTELLIGENCE (MCI)
 
-Dashboard web de investigación cripto construido con Streamlit. Su objetivo es ayudar a investigar activos con datos visibles, limitaciones explícitas y una separación clara entre hechos, estimaciones e hipótesis.
+Plataforma de investigación cripto basada en evidencia, hecha con Streamlit. No emite señales de compra: explica qué dicen los datos, qué falta y qué invalidaría una tesis.
 
-## Funcionalidades de esta primera versión
+## Qué hace la versión 0.3
+- **Radar** con moneda (USD/ARS/EUR), volumen mínimo y exclusión de stablecoins y wrapped/derivados.
+- **Dossier por activo** con evidencia rotulada como *hecho*, *estimación* o *hipótesis*, cada una con fuente, enlace y fecha de consulta.
+- **Veredicto calculado**: mide la calidad de la evidencia, no el atractivo. Si falta evidencia esencial, el resultado es **NO CONCLUYENTE**.
+- Cada indicio trae el criterio usado y **qué lo invalidaría**.
+- El precio y el momentum se muestran como contexto, nunca como fundamento.
 
-- Explorador de mercado con filtros por clasificación y búsqueda.
-- Datos de precio, capitalización, volumen y variaciones de 24 h / 7 d.
-- Dossier individual con métricas de oferta y FDV cuando están disponibles.
-- Exclusión predeterminada de stablecoins y activos wrapped/sintéticos del radar de crecimiento.
-- Avisos explícitos cuando la evidencia fundamental no alcanza para una conclusión.
-- Interfaz oscura adaptable a escritorio y móvil.
+## Reglas
+Sin trading automático, sin wallets, sin claves privadas. No es asesoramiento financiero.
 
-## Fuente y límites
+## Publicar en Streamlit Community Cloud
+Repositorio `Facundo-Montero/montero-crypto-intelligence`, rama `main`, archivo principal `app.py`. Streamlit Cloud redespliega solo cuando hacés push.
 
-Los datos de mercado se consultan desde la API pública de CoinGecko y se almacenan en caché durante cinco minutos. La disponibilidad, cobertura y límites dependen del proveedor. Esta versión todavía no verifica directamente TVL, fees, ingresos, actividad de usuarios, auditorías ni calendarios de desbloqueo; por eso no emite señales de compra.
-
-## Publicar gratis en Streamlit Community Cloud
-
-1. Entrá en https://share.streamlit.io/ e iniciá sesión con GitHub.
-2. Elegí **Create app**.
-3. Seleccioná el repositorio `Facundo-Montero/montero-crypto-intelligence`.
-4. Branch: `main`.
-5. Main file path: `app.py`.
-6. Elegí **Deploy**.
-
-Streamlit instalará las dependencias desde `requirements.txt`. No hacen falta claves API para esta versión.
-
-## Desarrollo local (opcional)
-
-```bash
-pip install -r requirements.txt
-streamlit run app.py
+Clave opcional de CoinGecko (plan Demo gratuito): en la app, **Settings → Secrets**:
+```toml
+COINGECKO_API_KEY = "tu_clave"
 ```
 
-## Metodología y advertencias
+## Estructura
+```
+app.py                     # interfaz
+mci/models.py              # Evidence, Finding, Dimension, Verdict
+mci/sources/coingecko.py   # una fuente = un módulo
+mci/analysis/              # classify, evidence, rules (umbrales), verdict
+tests/                     # pytest
+```
 
-- El orden por capitalización no representa potencial de rentabilidad.
-- Volumen, liquidez y momentum no equivalen a fundamentos.
-- La clasificación del activo es heurística y puede contener errores.
-- La ausencia de un dato no significa que el riesgo no exista.
-- MCI no conecta wallets, no ejecuta operaciones y no garantiza rendimientos.
-- La plataforma es informativa y no constituye asesoramiento financiero.
+## Pruebas (opcional)
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
 
-**Regla central:** si faltan datos esenciales para sostener una tesis, la conclusión debe ser **NO CONCLUYENTE**, no una recomendación de compra.
+## Próximas etapas
+3. Fundamentos con DefiLlama (TVL, fees, ingresos). 4. Tokenomics, desbloqueos y seguridad. 5. Comparables por sector. 6. Historial de tesis.

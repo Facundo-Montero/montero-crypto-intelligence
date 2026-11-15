@@ -1,0 +1,108 @@
+"""Reglas de lectura de MCI. Los umbrales son CRITERIOS de MCI (editables), no hechos del mercado."""
+from dataclasses import dataclass
+
+from mci.models import Finding
+
+
+@dataclass(frozen=True)
+class Thresholds:
+    vol_cap_high: float = 0.15   # volumen/capitalización considerado activo
+    vol_cap_low: float = 0.02    # volumen/capitalización considerado bajo
+    circ_max_high: float = 0.80  # proporción de oferta máxima ya circulando (alta)
+    circ_max_low: float = 0.40   # proporción de oferta máxima ya circulando (baja)
+    fdv_cap_high: float = 1.8    # FDV/capitalización que sugiere dilución pendiente
+    ath_deep: float = -75.0      # caída desde máximo histórico considerada profunda (%)
+
+
+THRESHOLDS = Thresholds()
+
+
+def evaluate(ev, th=THRESHOLDS):
+    """Devuelve lista de Finding a partir del dict de Evidence. Si falta un dato, la regla no se aplica."""
+    def v(k):
+        return ev[k].value if k in ev else None
+
+    out = []
+
+    vc = v("vol_cap")
+    if vc is not None and vc >= th.vol_cap_high:
+        out.append(Finding(
+            "liquidez", "a_favor",
+            f"El volumen de 24 h reportado equivale al {vc:.1%} de la capitalización.",
+            "Hipótesis: hay actividad de negociación suficiente como para que entrar y salir no sea trivialmente costoso.",
+            "Si el volumen está concentrado en pocos exchanges, incluye wash trading o la profundidad real del libro de órdenes es baja.",
+            f"Criterio MCI: volumen/capitalización ≥ {th.vol_cap_high:.0%}", ("vol_cap",)))
+    elif vc is not None and vc < th.vol_cap_low:
+        out.append(Finding(
+            "liquidez", "cautela",
+            f"El volumen de 24 h reportado equivale solo al {vc:.1%} de la capitalización.",
+            "Hipótesis: la liquidez podría ser baja y el costo de entrada o salida, alto.",
+            "Si el volumen real fuera de los exchanges agregados resulta mayor, o si el activo opera sobre todo en mercados OTC o institucionales.",
+            f"Criterio MCI: volumen/capitalización < {th.vol_cap_low:.0%}", ("vol_cap",)))
+
+    cm = v("circ_max")
+    if cm is not None and cm >= th.circ_max_high:
+        out.append(Finding(
+            "oferta_dilucion", "a_favor",
+            f"El {cm:.1%} de la oferta máxima ya está en circulación.",
+            "Hipótesis: el riesgo de dilución por emisión futura de tokens es menor.",
+            "Si existe emisión continua (inflación) no reflejada en la oferta máxima, o si los tokens circulantes están muy concentrados.",
+            f"Criterio MCI: circulante/oferta máxima ≥ {th.circ_max_high:.0%}", ("circ_max",)))
+    elif cm is not None and cm < th.circ_max_low:
+        out.append(Finding(
+            "oferta_dilucion", "cautela",
+            f"Solo el {cm:.1%} de la oferta máxima está en circulación.",
+            "Hipótesis: podría haber presión vendedora por desbloqueos y emisiones futuras.",
+            "Si el calendario de desbloqueos verificado muestra emisiones lentas o bloqueadas a largo plazo.",
+            f"Criterio MCI: circulante/oferta máxima < {th.circ_max_low:.0%}", ("circ_max",)))
+
+    fc = v("fdv_cap")
+    if fc is not None and fc > th.fdv_cap_high:
+        out.append(Finding(
+            "oferta_dilucion", "cautela",
+            f"La valoración totalmente diluida es {fc:.2f} veces la capitalización actual.",
+            "Hipótesis: parte relevante de la oferta aún no circula y podría diluir a los tenedores actuales.",
+            "Si el calendario de emisión real es mucho más largo que el horizonte de análisis, o si el FDV usa una oferta máxima que no se emitirá.",
+            f"Criterio MCI: FDV/capitalización > {th.fdv_cap_high}x", ("fdv_cap",)))
+
+    c = v("commits")
+    if c is not None and c > 0:
+        out.append(Finding(
+            "desarrollo", "a_favor",
+            f"CoinGecko reporta {c:,} commits en GitHub en las últimas 4 semanas.",
+            "Hipótesis (señal débil): el proyecto mantiene actividad de desarrollo pública.",
+            "Si los commits son cambios triviales, automáticos o de repositorios secundarios, o si el desarrollo real está en repositorios no rastreados.",
+            "Criterio MCI: commits > 0", ("commits",)))
+    elif c is not None:
+        out.append(Finding(
+            "desarrollo", "cautela",
+            "CoinGecko no reporta commits en las últimas 4 semanas.",
+            "Hipótesis: el desarrollo público podría estar detenido.",
+            "Si el desarrollo ocurre en repositorios privados o no vinculados a CoinGecko.",
+            "Criterio MCI: commits = 0", ("commits",)))
+
+    p7, p30 = v("p7"), v("p30")
+    if p7 is not None and p30 is not None:
+        if p7 > 0 and p30 > 0:
+            txt = "Rendimiento positivo a 7 y 30 días."
+        elif p7 < 0 and p30 < 0:
+            txt = "Rendimiento negativo a 7 y 30 días."
+        elif p7 > 0 > p30:
+            txt = "Rebote de 7 días dentro de un mes negativo."
+        else:
+            txt = "Rendimiento mixto entre 7 y 30 días."
+        out.append(Finding(
+            "precio", "contexto", txt + " Es contexto de precio, no un fundamento.",
+            "El movimiento de precio no demuestra que la tendencia continúe ni que exista un motivo fundamental.",
+            "Cualquier giro posterior de precio; no aporta información sobre la calidad del proyecto.",
+            "Criterio MCI: signo de variaciones a 7 y 30 días", ("p7", "p30")))
+
+    ac = v("ath_change")
+    if ac is not None and ac <= th.ath_deep:
+        out.append(Finding(
+            "precio", "contexto",
+            f"El precio está {abs(ac):.1f}% por debajo de su máximo histórico.",
+            "Puede reflejar recuperación potencial o deterioro estructural; el dato por sí solo no distingue entre ambos.",
+            "Un análisis de fundamentos y de la causa de la caída.",
+            f"Criterio MCI: distancia al máximo ≤ {th.ath_deep:.0f}%", ("ath_change",)))
+    return out
